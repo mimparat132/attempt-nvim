@@ -23,6 +23,16 @@ spec: # This wont work
                   name: webhttp # This needs to match an existing port name in this service
             path: /
             pathType: Prefix
+    - host: uxguide-temp.k8s.epic.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: uxguide-site # This needs to match an existing service name in the same namespace as this ingress
+                port:
+                  name: webhttp # This needs to match an existing port name in this service
+            path: /
+            pathType: Prefix
   tls: # The list of hosts needs to match the rules above for ACME to work
     - hosts:
         - uxguide-temp.k8s.epic.com
