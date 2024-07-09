@@ -1,0 +1,59 @@
+commands = {}
+dependencies = {
+   lyaml = {
+      ["6.2.8-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               },
+               {
+                  op = "<",
+                  version = {
+                     5, 5, string = "5.5"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   }
+}
+modules = {
+   ["lyaml.explicit"] = {
+      "lyaml/6.2.8-1"
+   },
+   ["lyaml.functional"] = {
+      "lyaml/6.2.8-1"
+   },
+   ["lyaml.implicit"] = {
+      "lyaml/6.2.8-1"
+   },
+   ["lyaml.init"] = {
+      "lyaml/6.2.8-1"
+   },
+   yaml = {
+      "lyaml/6.2.8-1"
+   }
+}
+repository = {
+   lyaml = {
+      ["6.2.8-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               ["lyaml.explicit"] = "lyaml/explicit.lua",
+               ["lyaml.functional"] = "lyaml/functional.lua",
+               ["lyaml.implicit"] = "lyaml/implicit.lua",
+               ["lyaml.init"] = "lyaml/init.lua",
+               yaml = "yaml.so"
+            }
+         }
+      }
+   }
+}
