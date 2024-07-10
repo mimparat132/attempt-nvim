@@ -142,7 +142,10 @@ function Get_current_path()
         local output = Recursive_find_key(data, "AXOEIEO5346322")
         local result = string.gsub(output[1], "AXOEIEO5346322", original_key)
         vim.api.nvim_set_current_line(cur_line)
-        print(result)
+
+        local output_string = "'" .. string_reindex(result) .. "'"
+        vim.fn.setreg("+Y", output_string)
+        vim.notify(output_string .. ' copied to clipboard...', vim.log.levels.INFO,{stages = "fade"})
     else
         Set_search_line()
         local current_buf_content = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), false)
