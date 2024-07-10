@@ -98,7 +98,7 @@ function Get_current_path_test()
         vim.api.nvim_set_current_line(cur_line)
         local output_string = "'" .. string_reindex(output[1]) .. "'"
         vim.fn.setreg("+Y", output_string)
-        vim.notify('Copied "' .. output_string .. '" to the clipboard!', vim.log.levels.INFO,{stages = "fade"})
+        vim.notify('Copied ' .. output_string .. ' to the clipboard...', vim.log.levels.INFO,{stages = "fade"})
     else
         print("Nothing here to do boss...")
     end
@@ -155,7 +155,7 @@ function Get_current_path()
         -- print("printing output table...")
         local output_string = "'" .. string_reindex(output[1]) .. "'"
         vim.fn.setreg("+Y", output_string)
-        vim.notify('Copied "' .. output_string .. '" to the clipboard!', vim.log.levels.INFO,{stages = "fade"})
+        vim.notify(output_string .. ' copied to clipboard...', vim.log.levels.INFO,{stages = "fade"})
     end
 end
 

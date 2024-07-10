@@ -11,8 +11,8 @@ metadata:
   name: uxguide-site
   namespace: uxguide
 spec:
-  ingressClassName: "nginx" 
-  rules: # This shouldn't be here 
+  ingressClassName: "nginx"
+  rules: # This shouldn't be here
     - host: uxguide-temp.k8s.epic.com
       http:
         paths:
