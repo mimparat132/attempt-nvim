@@ -9,6 +9,7 @@ local yaml = require('lyaml')
 vim.keymap.set("n", "<leader>b", ':lua Get_current_path()<CR>')
 vim.keymap.set("n", "<leader>d", ':lua Get_current_path_test()<CR>')
 
+
 local function mysplit(inputstr, sep)
     if sep == nil then
         sep = "%s"
@@ -19,6 +20,7 @@ local function mysplit(inputstr, sep)
     end
     return t
 end
+
 
 local function recursive_print(table)
     for key, value in pairs(table) do
@@ -51,17 +53,6 @@ local function string_reindex(input_str)
     return new_reindexed_str
 end
 
-Get_current_line = function()
-    local current_line = vim.api.nvim_get_current_line()
-    print(current_line)
-end
-
-local s = "one;two;;four"
-local words = {}
-for w in (s .. ";"):gmatch("([^;]*);") do
-    table.insert(words, w)
-end
-
 function Set_search_line()
     local cur_line = vim.api.nvim_get_current_line()
     local split = mysplit(cur_line, ":")
@@ -81,30 +72,36 @@ function Print_yaml_doc()
 end
 
 function Get_current_path_test()
-    -- local test_yaml = "    chart:"
     local cur_line = vim.api.nvim_get_current_line()
+
     -- check if the line is an array that has no key value
     local array_line_check = string.match(cur_line, "%S+")
+
     -- This will get everythng aften "-" not including the whitespace between
     -- "-" and the start of the value
-    local array_val = string.match(cur_line, "%w+.*")
-    -- if array_line_check == "-" then
-    -- end
-    local whitespace = string.match(cur_line, "%s+")
+    -- local array_val = string.match(cur_line, "%w+.*")
+    --
+    local colon_present = string.find(cur_line, ":")
 
-    local search_string = whitespace .. "- AXOEIEO5346322"
-    vim.api.nvim_set_current_line(search_string)
+    if ( array_line_check == "-") and ( not colon_present )  then
+        local whitespace = string.match(cur_line, "%s+")
 
-    local current_buf_content = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), false)
-    local current_buf_string = table.concat(current_buf_content, "\n")
-    local data = yaml.load(current_buf_string)
+        local search_string = whitespace .. "- AXOEIEO5346322"
+        vim.api.nvim_set_current_line(search_string)
 
-    local output = Recursive_find(data, "AXOEIEO5346322")
+        local current_buf_content = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), false)
+        local current_buf_string = table.concat(current_buf_content, "\n")
+        local data = yaml.load(current_buf_string)
 
-    vim.api.nvim_set_current_line(cur_line)
-    local output_string = "'" .. string_reindex(output[1]) .. "'"
-    vim.fn.setreg("+Y", output_string)
-    vim.notify('Copied "' .. output_string .. '" to the clipboard!')
+        local output = Recursive_find(data, "AXOEIEO5346322")
+
+        vim.api.nvim_set_current_line(cur_line)
+        local output_string = "'" .. string_reindex(output[1]) .. "'"
+        vim.fn.setreg("+Y", output_string)
+        vim.notify('Copied "' .. output_string .. '" to the clipboard!', vim.log.levels.INFO,{stages = "fade"})
+    else
+        print("Nothing here to do boss...")
+    end
 end
 
 function Get_current_path()
@@ -115,6 +112,16 @@ function Get_current_path()
         return
     end
     local split = mysplit(cur_line, ":")
+    print('"' .. split[1] .. '"')
+    -- print('"' .. split[2] .. '"')
+    -- Check if there is anything other than whitespace in the value
+    -- of the key,value pair
+    -- If there is only whitespace, remove it
+    if split[2] ~= nil then
+        if string.match(split[2],"%w+") == nil then
+            split[2] = nil
+        end
+    end
     -- if the second value of the table containing the split key value
     -- pair is nil then we know we are looking for a key and not
     -- a key,value pair

@@ -10,9 +10,9 @@ metadata:
     app: uxguide-site
   name: uxguide-site
   namespace: uxguide
-spec: # This wont work
-  ingressClassName: "nginx"
-  rules:
+spec:
+  ingressClassName: "nginx" 
+  rules: # This shouldn't be here 
     - host: uxguide-temp.k8s.epic.com
       http:
         paths:
