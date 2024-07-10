@@ -112,7 +112,8 @@ function Get_current_path()
         return
     end
     local split = mysplit(cur_line, ":")
-    print('"' .. split[1] .. '"')
+    -- for testing
+    -- print('"' .. split[1] .. '"')
     -- print('"' .. split[2] .. '"')
     -- Check if there is anything other than whitespace in the value
     -- of the key,value pair
@@ -152,7 +153,9 @@ function Get_current_path()
         -- inserting the needle
         vim.api.nvim_set_current_line(cur_line)
         -- print("printing output table...")
-        print(output[1])
+        local output_string = "'" .. string_reindex(output[1]) .. "'"
+        vim.fn.setreg("+Y", output_string)
+        vim.notify('Copied "' .. output_string .. '" to the clipboard!', vim.log.levels.INFO,{stages = "fade"})
     end
 end
 
