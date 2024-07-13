@@ -46,11 +46,14 @@ local function recursive_print(table)
     end
 end
 
+-- TODO! After figuring out where to put the search string,
+-- return a table that will tell the wrapper function what kind
+-- of recursive search to perform on the yaml file
 function Set_search_string(str_input_table)
-    local search_str
+    local search_str = ""
     -- case 1: top level key
-    print(string.match(str_input_table[1],"$:"))
-    if (string.match(str_input_table[1],"$:") ~= nil) then
+    -- print(string.match(str_input_table[1],":$"))
+    if (string.match(str_input_table[1],":$") ~= nil) then
         print("made it into the first loop")
         if (str_input_table[2] ~= nil) and (str_input_table[2] ~= "#") then
             search_str = str_input_table[1] .. " AXOEIEO5346322"
@@ -61,21 +64,37 @@ function Set_search_string(str_input_table)
         end
     end
     -- We now know there is just whitespace in the first table index
+    print("made it past the first section")
 
     for key, value in pairs(str_input_table) do
-        if string.match(value,"%w") == nil then
+        print("going through the for loop")
+        if (string.match(value,"%S") == nil) then
+            print("key:" .. key .. "value:" .. value)
+            print("adding leading whitespace...")
             search_str = search_str .. value
         -- This will match "   - value"
-        elseif (value == "-") and (string.match(str_input_table[key+1],"$:") == nil) then
+        elseif (value == "-") and (string.match(str_input_table[key+1],":$") == nil) then
+            print("Made it into the first elseif")
             search_str = search_str .. value .. " AXOEIEO5346322"
+            return search_str
         -- This will match "   - key:"
-        elseif (value == "-") and (string.match(str_input_table[key+1],"$:") ~= nil) then
+        elseif (value == "-") and (string.match(str_input_table[key+1],":$") ~= nil) then
+            print("made it into the second elseif")
+            if (str_input_table[key+2] ~= nil) and (str_input_table[key+2] == "#") then
+                print("made it into elseif 2 if 1")
+                search_str = search_str .. "- AXOEIEO5346322:"
+                return search_str
+            end
+            if (str_input_table[key+2] == nil) then
+                print("made it into elseif 2 if 2")
+                search_str = search_str .. "- AXOEIEO5346322:"
+                return search_str
+            end
             -- if the next value is not a comment then it will match "   - key: value"
             if (str_input_table[key+2] ~= nil) and (str_input_table[key+2] ~= "#") then
+                print("made it into elseif 2 if 3")
                 search_str = search_str .. "- " .. str_input_table[key+1] .. " AXOEIEO5346322"
-            end
-            if (str_input_table[key+2] ~= nil) and (str_input_table[key+2] == "#") then
-                search_str = search_str .. "- AXOEIEO5346322:"
+                return search_str
             end
         end
     end
@@ -88,6 +107,7 @@ function Print_string()
     recursive_print(output)
     local res = Set_search_string(output)
     print(res)
-    -- local strings = "    "
-    -- print(string.match(strings,"%w"))
+    --  local strings = "   -"
+    --  local some = string.match(strings,"%s")
+    --  print('"' .. some .. '"')
 end

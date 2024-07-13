@@ -16,14 +16,14 @@ spec:
     - host: uxguide-temp.k8s.epic.com # What about this
       http:
         paths:
-          - backend:
+          - backend: # some stuff
               service:
                 name: uxguide-site # This needs to match an existing service name in the same namespace as this ingress
                 port:
                   name: webhttp # This needs to match an existing port name in this service
             path: /
             pathType: Prefix
-    - host: uxguide-temp.k8s.epic.com
+    - host: uxguide-temp.k8s.epic.com # some other stiff
       http:
         paths:
           - backend:
