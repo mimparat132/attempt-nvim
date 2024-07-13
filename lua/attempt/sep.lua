@@ -1,6 +1,10 @@
-local string = "    cert-manager.io/cluster-issuer: acme # This will attempt to automatically generate a cert."
+local yaml = require('lyaml')
 
-vim.keymap.set("n", "<leader>b", ':lua Print_string()<CR>')
+-- This string is for testing
+-- local string = "    cert-manager.io/cluster-issuer: acme # This will attempt to automatically generate a cert."
+
+vim.keymap.set("n", "<leader>b", ':lua Find_path()<CR>')
+vim.keymap.set("n", "<leader>n", ':lua Test_build_search_opts()<CR>')
 
 local function mysplit(inputstr, sep)
     if sep == nil then
@@ -17,16 +21,6 @@ local function mysplit(inputstr, sep)
         table.insert(t,str)
     end
     return t
-end
-
-function Set_search_line()
-    local cur_line = vim.api.nvim_get_current_line()
-    local split = mysplit(cur_line)
-    local val_len = string.len(split[2])
-    local string_len = string.len(string)
-    local new_string = string.sub(string,1,string_len - val_len)
-    new_string = new_string .. "some_value"
-    vim.api.nvim_set_current_line(new_string)
 end
 
 local function recursive_print(table)
@@ -46,46 +40,80 @@ local function recursive_print(table)
     end
 end
 
--- TODO! After figuring out where to put the search string,
--- return a table that will tell the wrapper function what kind
--- of recursive search to perform on the yaml file
+-- DOCUMENTATION
+
+-- ERROR handling and edge cases
+-- How to handle running the search function on a line that contains no yaml?
+-- Case 1: document separators
+--  "---" or "..."
+
+
+
 
 -- | "TLMKV"
+-- | recursive_find_value()
 -- |Top level map with key value
 -- | apiVersion: networking.k8s.io/v1
 
+-- | "TLK"
+-- | recursive_find_key()
+-- | 7 Top level key
+-- |metadata:
+
 -- | "IOK"
+-- | recursive_find_key()
 -- |Indented object key
 -- |  annotations:
 
 -- | "IMKV"
+-- | recursive_find_value()
 -- |Indented map with key value
 -- |    cert-manager.io/cluster-issuer: acme # This will attempt to automatically generate a cert.
 
 -- | "AKV"
+-- | recursive_find_value()
 -- |Array with key value
 -- |    - host: uxguide-temp.k8s.epic.com # What about this
 
 -- | "AOK"
+-- | recursive_find_key()
 -- |Array object key
 -- |       - backend: # some stuff
 
 -- | "AVO"
+-- | recursive_find_value()
 -- |Array value only
 -- |        - uxguide-temp.k8s.epic.com
 
-function Set_search_string(str_input_table,needle)
+-- res table schema
+-- res["table_type"] = 1 of the 7 search types listed above
+-- res["search_str"] = the search string returned from the set_search_string function
+-- res["original_key"] = the key name that was replaced with the needle
+--      This is useful for object keys since the object key itself gets replaced
+--      when setting the needle and needs to be reiserted into the path 
+--      after the path is returned from the search function
+
+local function build_search_opts(str_input_table,needle)
     local res = {}
     res["table_type"] = ""
     local search_str = ""
+    if str_input_table[1] == nil then
+        return
+    end
+    -- TODO fix this comment
     -- case 1: top level key
     if (string.match(str_input_table[1],":$") ~= nil) then
         if (str_input_table[2] ~= nil) and (str_input_table[2] ~= "#") then
             search_str = str_input_table[1] .. " " .. needle
-            return search_str
+            res["table_type"] = "TLMKV"
+            res["search_str"] = search_str
+            return res
         else
             search_str = needle .. ":"
-            return search_str
+            res["original_key"] = string.match(str_input_table[1],"%w+")
+            res["table_type"] = "TLK"
+            res["search_str"] = search_str
+            return res
         end
     end
 
@@ -97,16 +125,24 @@ function Set_search_string(str_input_table,needle)
             -- matches "   key:"
             if str_input_table[3] == nil then
                 search_str = search_str .. str_input_table[1] .. needle .. ":"
-                return search_str
+                res["original_key"] = string.match(str_input_table[2],"%w+")
+                res["table_type"] = "IOK"
+                res["search_str"] = search_str
+                return res
             end
             if (str_input_table[3] ~= nil) and (str_input_table[3] == "#") then
                 search_str = search_str .. str_input_table[1] .. needle .. ":"
-                return search_str
+                res["original_key"] = string.match(str_input_table[2],"%w+")
+                res["table_type"] = "IOK"
+                res["search_str"] = search_str
+                return res
             end
             if (str_input_table[3] ~= nil) and (str_input_table[3] ~= "#") then
                 -- search_str = search_str .. str_input_table[1] .. str_input_table[2] .. " AXOEIEO5346322"
                 search_str = search_str .. str_input_table[1] .. str_input_table[2] .. " " .. needle
-                return search_str
+                res["table_type"] = "IMKV"
+                res["search_str"] = search_str
+                return res
             end
         end
     end
@@ -118,48 +154,199 @@ function Set_search_string(str_input_table,needle)
 
         -- This will match array objects
         elseif (value == "-") and (string.match(str_input_table[key+1],":$") == nil) then
-            print("Made it into the first elseif")
             -- search_str = search_str .. value .. " AXOEIEO5346322"
             search_str = search_str .. value .. " " .. needle
-            return search_str
+            res["table_type"] = "AVO"
+            res["search_str"] = search_str
+            return res
         -- This will match "   - key:"
 
         elseif (value == "-") and (string.match(str_input_table[key+1],":$") ~= nil) then
-            print("made it into the second elseif")
             if (str_input_table[key+2] ~= nil) and (str_input_table[key+2] == "#") then
                 print("made it into elseif 2 if 1")
                 -- search_str = search_str .. "- AXOEIEO5346322:"
                 search_str = search_str .. "- " .. needle .. ":"
-                return search_str
+                res["original_key"] = string.match(str_input_table[key+1],"%w+")
+                res["table_type"] = "AOK"
+                res["search_str"] = search_str
+                return res
             end
 
-            -- This will match "    - value"
+            -- This will match "    - key:"
             if (str_input_table[key+2] == nil) then
-                print("made it into elseif 2 if 2")
                 -- search_str = search_str .. "- AXOEIEO5346322:"
                 search_str = search_str .. "- " .. needle .. ":"
-                return search_str
+                res["original_key"] = string.match(str_input_table[key+1],"%w+")
+                res["table_type"] = "AOK"
+                res["search_str"] = search_str
+                return res
             end
 
             -- if the next value is not a comment then it will match "   - key: value"
             if (str_input_table[key+2] ~= nil) and (str_input_table[key+2] ~= "#") then
-                print("made it into elseif 2 if 3")
                 -- search_str = search_str .. "- " .. str_input_table[key+1] .. " AXOEIEO5346322"
                 search_str = search_str .. "- " .. str_input_table[key+1] .. " " .. needle
-                return search_str
+                res["table_type"] = "AKV"
+                res["search_str"] = search_str
+                return res
             end
         end
     end
 end
 
+local function recursive_find_value(t, value_to_find, paths, current_path)
+    if paths == nil then
+        paths = {}
+    end
+    if current_path == nil then
+        current_path = {}
+    end
 
-function Print_string()
+    -- print("current_path:", current_path)
+    for key, value in pairs(t) do
+        -- print("key:", key)
+        -- print("value", value)
+        if (type(value) ~= "table") and (value == value_to_find) then
+            -- print("found the value, adding current path to paths and returning")
+            -- table.insert(current_path,key)
+            -- table.insert(paths,current_path)
+            local res = {}
+            table.insert(res, key)
+            return res
+        end
+
+        if type(value) == "table" then
+            -- table.insert(current_path,key)
+            local result = recursive_find_value(value, value_to_find, paths, current_path)
+            local next = next
+            if next(result) ~= nil then
+                local path = {}
+                table.insert(path, key .. "." .. result[1])
+                return path
+            end
+        end
+    end
+    return {}
+end
+
+local function recursive_find_key(t, key_to_find, paths, current_path)
+    if paths == nil then
+        paths = {}
+    end
+    if current_path == nil then
+        current_path = {}
+    end
+
+    -- print("current_path:", current_path)
+    for key, value in pairs(t) do
+        -- print("key:", key)
+        -- print("value", value)
+        if (key == key_to_find) then
+            local path = {}
+            table.insert(path, key)
+            return path
+        end
+
+        if type(value) == "table" then
+            local result = recursive_find_key(value, key_to_find, paths, current_path)
+            local next = next
+            if next(result) ~= nil then
+                local path = {}
+                table.insert(path, key .. "." .. result[1])
+                return path
+            end
+        end
+    end
+    return {}
+end
+
+local function string_reindex(input_str)
+    local string_table = mysplit(input_str, ".")
+
+    for key, value in pairs(string_table) do
+        local number = tonumber(value)
+        if number ~= nil then
+            string_table[key] = "[" .. (number - 1) .. "]"
+        end
+    end
+
+    local new_reindexed_str = ""
+
+    for key, value in pairs(string_table) do
+        new_reindexed_str = new_reindexed_str .. "." .. value
+    end
+
+    return new_reindexed_str
+end
+
+function Find_path()
+    -- Grab the current line the cursor is on when the function is executed
+    local cur_line = vim.api.nvim_get_current_line()
+    -- Tokenize the current line into a table
+    local split_cur_line = mysplit(cur_line)
+    -- Create a needle to insert into the haystack
+    -- This needle must be:
+    -- a base64 string containing only AlphaNumeric characters (no symbols)
+    -- 8-16 chars long
+    local needle = "8YDxcEYQyu0UKU4"
+    -- build the search opts. Returns a table
+    local search_opts = build_search_opts(split_cur_line,needle)
+    if search_opts == nil then
+        print("No yaml path found...")
+        return
+    end
+    -- set the search string in the buffer
+    vim.api.nvim_set_current_line(search_opts["search_str"])
+    -- read the yaml doc into a var from the current buffer
+    local current_buf_content = vim.api.nvim_buf_get_lines(0, 0, vim.api.nvim_buf_line_count(0), false)
+    local current_buf_string = table.concat(current_buf_content, "\n")
+    local yaml_data = yaml.load(current_buf_string)
+    -- restore the current line after loading in the buffer with the
+    -- inserted needle
+    -- This should restore the file to the state before the function was called
+    vim.api.nvim_set_current_line(cur_line)
+    -- Based on the string type pick a search function
+    -- Search function will return the build path
+    local path_table = {}
+    if search_opts["table_type"] == "TLMKV" then
+        path_table = recursive_find_value(yaml_data,needle)
+    end
+    if search_opts["table_type"] == "TLK" then
+        path_table = recursive_find_key(yaml_data,needle)
+        path_table[1] = string.gsub(path_table[1], needle, search_opts["original_key"])
+    end
+    if search_opts["table_type"] == "IOK" then
+        path_table = recursive_find_key(yaml_data,needle)
+        path_table[1] = string.gsub(path_table[1], needle, search_opts["original_key"])
+    end
+    if search_opts["table_type"] == "IMKV" then
+        path_table = recursive_find_value(yaml_data,needle)
+    end
+    if search_opts["table_type"] == "AKV" then
+        path_table = recursive_find_value(yaml_data,needle)
+    end
+    if search_opts["table_type"] == "AOK" then
+        path_table = recursive_find_key(yaml_data,needle)
+        path_table[1] = string.gsub(path_table[1], needle, search_opts["original_key"])
+    end
+    if search_opts["table_type"] == "AVO" then
+        path_table = recursive_find_value(yaml_data,needle)
+    end
+
+    -- reindex the path returned from the find function
+    -- We need to reindex the path to account for lua starting indexes at 1
+    path_table[1] = string_reindex(path_table[1])
+
+    -- for now just print the found path to the console
+    print(path_table[1])
+end
+
+function Test_build_search_opts()
     local cur_line = vim.api.nvim_get_current_line()
     local output = mysplit(cur_line)
     recursive_print(output)
-    local res = Set_search_string(output,"8YDxcEYQyu0UKU4+omo2bQ==")
-    print(res)
-    --  local strings = "   -"
-    --  local some = string.match(strings,"%s")
-    --  print('"' .. some .. '"')
+    local res_table = build_search_opts(output,"omo2bQ==")
+    if res_table == nil then
+        print("true")
+    end
 end
