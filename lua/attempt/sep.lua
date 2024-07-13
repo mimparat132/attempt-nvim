@@ -1,10 +1,10 @@
 local yaml = require('lyaml')
 
--- This string is for testing
--- local string = "    cert-manager.io/cluster-issuer: acme # This will attempt to automatically generate a cert."
+-- Set the default notify function to nvim.notify
+vim.notify = require("notify")
 
-vim.keymap.set("n", "<leader>b", ':lua Find_path()<CR>')
-vim.keymap.set("n", "<leader>n", ':lua Test_build_search_opts()<CR>')
+vim.keymap.set("n", "<leader>b", ':lua Get_yq_path()<CR>')
+vim.keymap.set("n", "<leader>n", ':lua Get_kustomize_path()<CR>')
 
 local function mysplit(inputstr, sep)
     if sep == nil then
@@ -221,7 +221,7 @@ local function recursive_find_value(t, value_to_find, paths, current_path)
             local next = next
             if next(result) ~= nil then
                 local path = {}
-                table.insert(path, key .. "." .. result[1])
+                table.insert(path, key .. ">" .. result[1])
                 return path
             end
         end
@@ -252,7 +252,7 @@ local function recursive_find_key(t, key_to_find, paths, current_path)
             local next = next
             if next(result) ~= nil then
                 local path = {}
-                table.insert(path, key .. "." .. result[1])
+                table.insert(path, key .. ">" .. result[1])
                 return path
             end
         end
@@ -260,26 +260,75 @@ local function recursive_find_key(t, key_to_find, paths, current_path)
     return {}
 end
 
-local function string_reindex(input_str)
-    local string_table = mysplit(input_str, ".")
+local function string_reindex(input_str,reindex_syntax)
 
-    for key, value in pairs(string_table) do
-        local number = tonumber(value)
-        if number ~= nil then
-            string_table[key] = "[" .. (number - 1) .. "]"
+    local string_table = mysplit(input_str, ">")
+
+    if reindex_syntax == "yq" then
+        for key, value in pairs(string_table) do
+            local number = tonumber(value)
+            if number ~= nil then
+                string_table[key] = "[" .. (number - 1) .. "]"
+            end
         end
+
+        for key, value in pairs(string_table) do
+            if string.match(value,"/") ~= nil then
+                string_table[key] = '"' .. value .. '"'
+            end
+        end
+
+    end
+
+    if reindex_syntax == "kustomize" then
+        for key, value in pairs(string_table) do
+            local number = tonumber(value)
+            if number ~= nil then
+                string_table[key] = (number - 1)
+            end
+        end
+
+        for key, value in pairs(string_table) do
+            if string.match(value,"/") ~= nil then
+                string_table[key] = string.gsub(string_table[key], "/","~1")
+            end
+        end
+
     end
 
     local new_reindexed_str = ""
 
-    for key, value in pairs(string_table) do
-        new_reindexed_str = new_reindexed_str .. "." .. value
+    if reindex_syntax == "yq" then
+        for key, value in pairs(string_table) do
+            new_reindexed_str = new_reindexed_str .. "." .. value
+        end
+    end
+    if reindex_syntax == "kustomize" then
+        for key, value in pairs(string_table) do
+            new_reindexed_str = new_reindexed_str .. "/" .. value
+        end
     end
 
     return new_reindexed_str
 end
 
-function Find_path()
+
+-- The Find_path() function will find the path to a key in a yaml document
+-- The function will copy the path to the global clipboard in 2 syntaxes:
+--      yq syntax
+--      kustomize path patch syntax
+-- The keypress that executes this function will pass to the Find_path()
+-- function a option that will determine the desired path syntax you want
+-- to copy
+-- Find_path(find_opts) takes in input table that will customize the behavior
+-- of the Find_path() function
+--
+-- find_opts{} will have a value find_opts["syntax"] that can be:
+--      "yq"
+--      "kustomize"
+-- Find_path() will copy the search string to your global buffer and 
+-- use notify to signal to the user what path it has copied to the clipboard
+local function find_path(find_opts)
     -- Grab the current line the cursor is on when the function is executed
     local cur_line = vim.api.nvim_get_current_line()
     -- Tokenize the current line into a table
@@ -335,18 +384,26 @@ function Find_path()
 
     -- reindex the path returned from the find function
     -- We need to reindex the path to account for lua starting indexes at 1
-    path_table[1] = string_reindex(path_table[1])
+    -- Pass the syntax you want to format the path into. Can be:
+    --  "yq" or "kustomize"
+    path_table[1] = string_reindex(path_table[1],find_opts["syntax"])
+
+    -- Copy the path to the global clipboard
+    vim.fn.setreg("+Y", path_table[1])
+    vim.notify(path_table[1].. ' copied to clipboard...', vim.log.levels.INFO,{stages = "fade"})
 
     -- for now just print the found path to the console
     print(path_table[1])
 end
 
-function Test_build_search_opts()
-    local cur_line = vim.api.nvim_get_current_line()
-    local output = mysplit(cur_line)
-    recursive_print(output)
-    local res_table = build_search_opts(output,"omo2bQ==")
-    if res_table == nil then
-        print("true")
-    end
+function Get_kustomize_path()
+    local find_opts = {}
+    find_opts["syntax"] = "kustomize"
+    find_path(find_opts)
+end
+
+function Get_yq_path()
+    local find_opts = {}
+    find_opts["syntax"] = "yq"
+    find_path(find_opts)
 end
