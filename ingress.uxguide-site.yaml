@@ -1,6 +1,6 @@
 ---
 apiVersion: networking.k8s.io/v1
-kind: Ingress
+kind: Ingress # some stuff here
 metadata:
   annotations:
     cert-manager.io/cluster-issuer: acme # This will attempt to automatically generate a cert.
@@ -13,7 +13,7 @@ metadata:
 spec:
   ingressClassName: "nginx"
   rules: # This shouldn't be here
-    - host: uxguide-temp.k8s.epic.com
+    - host: uxguide-temp.k8s.epic.com # What about this
       http:
         paths:
           - backend:
@@ -36,4 +36,4 @@ spec:
   tls: # The list of hosts needs to match the rules above for ACME to work
     - hosts:
         - uxguide-temp.k8s.epic.com
-      secretName: uxguide-site-cert-manager
+      secretName: "What happens when you make a quoted string" # also a comment
