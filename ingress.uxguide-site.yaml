@@ -2,9 +2,6 @@
 # 1 Top level map with key value
 apiVersion: networking.k8s.io/v1
 kind: Ingress # some stuff here
-# 7 Top level key
-# This is broken
-
 metadata:
   # 2 Indented object key
   annotations:

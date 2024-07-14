@@ -1,5 +1,4 @@
 local yaml = require('lyaml')
-
 -- Set the default notify function to nvim.notify
 vim.notify = require("notify")
 
@@ -23,12 +22,12 @@ local function mysplit(inputstr, sep)
     return t
 end
 
-local function recursive_print(table)
+function Recursive_print(table)
     for key, value in pairs(table) do
         if type(value) == "table" then
             print("table key: " .. key)
             print("table value: ", value)
-            recursive_print(value)
+            Recursive_print(value)
         else
             local word = string.match(value, "%w+")
             if word == nil then
@@ -265,14 +264,14 @@ local function string_reindex(input_str,reindex_syntax)
     local string_table = mysplit(input_str, ">")
 
     if reindex_syntax == "yq" then
-        for key, value in pairs(string_table) do
+        for key, value in ipairs(string_table) do
             local number = tonumber(value)
             if number ~= nil then
                 string_table[key] = "[" .. (number - 1) .. "]"
             end
         end
 
-        for key, value in pairs(string_table) do
+        for key, value in ipairs(string_table) do
             if string.match(value,"/") ~= nil then
                 string_table[key] = '"' .. value .. '"'
             end
@@ -281,14 +280,14 @@ local function string_reindex(input_str,reindex_syntax)
     end
 
     if reindex_syntax == "kustomize" then
-        for key, value in pairs(string_table) do
+        for key, value in ipairs(string_table) do
             local number = tonumber(value)
             if number ~= nil then
                 string_table[key] = (number - 1)
             end
         end
 
-        for key, value in pairs(string_table) do
+        for key, value in ipairs(string_table) do
             if string.match(value,"/") ~= nil then
                 string_table[key] = string.gsub(string_table[key], "/","~1")
             end
@@ -299,12 +298,12 @@ local function string_reindex(input_str,reindex_syntax)
     local new_reindexed_str = ""
 
     if reindex_syntax == "yq" then
-        for key, value in pairs(string_table) do
+        for _, value in ipairs(string_table) do
             new_reindexed_str = new_reindexed_str .. "." .. value
         end
     end
     if reindex_syntax == "kustomize" then
-        for key, value in pairs(string_table) do
+        for _, value in ipairs(string_table) do
             new_reindexed_str = new_reindexed_str .. "/" .. value
         end
     end

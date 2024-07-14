@@ -39,7 +39,6 @@ end
 M.pop = function(name)
 end
 
-
 M.push("debug_mode", "n", {
   [" h"] = "echo 'Hello'",
   [" g"] = "echo 'Goodbye'",
